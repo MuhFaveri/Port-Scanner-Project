@@ -101,6 +101,9 @@ Iniciando varredura em google.com...
 
 Varredura concluída em 2.34 segundos.
 
+
+```
+
 ## 📁 Estrutura do Projeto
 
 port-scanner/
