@@ -1,132 +1,143 @@
-# Port Scanner Python - Scanner de Portas TCP
+# 🔍 Port Scanner Python — Scanner de Portas TCP
 
-Um scanner de portas TCP simples e eficiente escrito em Python que utiliza multi-threading para escanear portas em hosts remotos ou locais.
+Um scanner de portas TCP simples, eficiente e interativo, escrito em Python. Utiliza **multi-threading** e **barra de progresso com `tqdm`** para escanear portas em hosts remotos ou locais com rapidez e clareza.
+
+---
 
 ## 📋 Descrição
 
-Este programa escaneia portas TCP em um host específico para identificar quais portas estão abertas. É útil para:
-- Testes de segurança em sua própria rede
+Este programa escaneia portas TCP de um host específico para identificar quais estão abertas e quais serviços podem estar ativos. É útil para:
+
+- Testes de segurança em redes próprias
 - Verificação de serviços em execução
-- Diagnóstico de problemas de conectividade
-- Aprendizado sobre redes e segurança
+- Diagnóstico de conectividade
+- Aprendizado sobre redes e cibersegurança
+
+---
 
 ## 🚀 Instalação
 
-### Pré-requisitos
-- Python 3.6 ou superior
-- Nenhuma biblioteca externa necessária (usa apenas bibliotecas padrão do Python)
+### ✅ Pré-requisitos
 
-### Verificar Python
+- Python 3.6 ou superior
+- Biblioteca externa: `tqdm`
+
+### 📦 Instalar `tqdm`
+
+```bash
+pip install tqdm
+```
+
+### 🔍 Verificar versão do Python
+
 ```bash
 python --version
 # ou
 python3 --version
 ```
 
+---
+
 ## 🎯 Como Usar
 
 ### 1. Executar o scanner
+
 ```bash
 python scanner.py
 ```
 
 ### 2. O programa solicitará:
-```
-Digite o IP ou domínio para escanear: [digite o host]
+
+```text
+Digite o IP ou domínio para escanear: [ex: google.com]
+Porta inicial: [ex: 1]
+Porta final: [ex: 1024]
 ```
 
-### 3. Exemplos de entrada:
-- IP local: `127.0.0.1`
-- IP de rede: `192.168.1.1`
-- Domínio: `google.com` ou `localhost`
-- Site: `example.com`
+---
 
 ## 📊 Funcionalidades
 
-- ✅ **Multi-threading**: Escanear múltiplas portas simultaneamente
-- ✅ **Timeout configurável**: 1 segundo por porta
-- ✅ **Range de portas**: 1-1024 (padrão)
-- ✅ **Feedback em tempo real**: Mostra portas abertas conforme são encontradas
-- ✅ **Contador de tempo**: Mostra tempo total de execução
-- ✅ **Tratamento de erros**: Graceful handling de timeouts e erros de conexão
+- ✅ Multi-threading: escaneamento paralelo de portas
+- ✅ Barra de progresso com `tqdm`
+- ✅ Identificação de serviços comuns (HTTP, FTP, SSH etc.)
+- ✅ Validação de IP/domínio antes da varredura
+- ✅ Entrada personalizada de intervalo de portas
+- ✅ Tempo total de execução exibido
+- ✅ Resultado salvo automaticamente em `resultado_scan.txt`
 
-## 🔧 Personalização
-
-### Alterar range de portas
-Edite as variáveis no código:
-```python
-start_port = 1      # Porta inicial
-end_port = 1024     # Porta final
-```
-
-### Alterar timeout
-Edite a linha:
-```python
-sock.settimeout(1)  # Tempo em segundos
-```
+---
 
 ## 🖥️ Exemplos de Uso
 
-### 1. Escanear localhost
+### Escanear localhost
+
 ```bash
 python scanner.py
 # Digite: 127.0.0.1
 ```
 
-### 2. Escanear roteador local
+### Escanear roteador local
+
 ```bash
 python scanner.py
-# Digite: 192.168.1.1
+# Digite: 192.168.0.1
 ```
 
-### 3. Escanear site
+### Escanear site público
+
 ```bash
 python scanner.py
 # Digite: google.com
 ```
 
-### 4. Escanear com IP específico
-```bash
-python scanner.py
-# Digite: 8.8.8.8
-```
+---
 
 ## 📋 Saída Esperada
 
+```text
+🚀 Iniciando varredura em google.com...
+
+Escaneando: 100%|████████████████████████| 1024/1024 [00:02<00:00, 500.00it/s]
+
+✅ Varredura concluída em 2.34 segundos.
+
+🔓 Portas abertas encontradas:
+  - Porta 80 (HTTP)
+  - Porta 443 (HTTPS)
+
+📝 Resultado salvo em 'resultado_scan.txt'
 ```
-Iniciando varredura em google.com...
 
-[+] Porta 80 aberta
-[+] Porta 443 aberta
-
-Varredura concluída em 2.34 segundos.
-
-
-```
+---
 
 ## 📁 Estrutura do Projeto
 
+```
 port-scanner/
 │
-├── .qodo/                    # Diretório do projeto
-│   ├── scanner.py           # Arquivo principal do scanner
-│   ├── utils.py             # Utilitários auxiliares
-│   └── README.md            # Este arquivo de documentação
-
-
+├── scanner.py           # Arquivo principal do scanner
+├── resultado_scan.txt   # Arquivo gerado com os resultados
+└── README.md            # Documentação do projeto
 ```
+
+---
 
 ## ⚠️ Avisos Importantes
 
 ### Uso Responsável
-- **Use apenas em redes que você possui ou tem permissão para testar**
-- **Não use para atividades maliciosas**
 
-## 👨‍💻 Autor
-
-Murilo Vinícius de Faveri — projeto para estudo de programação e cibersegurança.
+- ⚠️ Use apenas em redes que você possui ou tem permissão para testar.
+- ❌ Não utilize para atividades maliciosas ou invasivas.
 
 ---
 
+## 👨‍💻 Autor
 
+**Murilo Vinícius de Faveri**  
+Projeto desenvolvido para estudo de programação, redes e cibersegurança.
+
+---
+
+```
 
