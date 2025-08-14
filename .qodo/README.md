@@ -1,6 +1,6 @@
 # 🔍 Port Scanner Python — Scanner de Portas TCP
 
-Um scanner de portas TCP simples, eficiente e interativo, escrito em Python. Utiliza **multi-threading** e **barra de progresso com `tqdm`** para escanear portas em hosts remotos ou locais com rapidez e clareza.
+Um scanner de portas TCP simples, eficiente e interativo, escrito em Python. Utiliza **multi-threading**, **barra de progresso com `tqdm`**, e gera arquivos de resultado com **timestamp automático**. Ideal para escanear hosts locais ou remotos com rapidez e clareza.
 
 ---
 
@@ -8,9 +8,9 @@ Um scanner de portas TCP simples, eficiente e interativo, escrito em Python. Uti
 
 Este programa escaneia portas TCP de um host específico para identificar quais estão abertas e quais serviços podem estar ativos. É útil para:
 
-- Testes de segurança em redes próprias
-- Verificação de serviços em execução
-- Diagnóstico de conectividade
+- Testes de segurança em redes próprias  
+- Verificação de serviços em execução  
+- Diagnóstico de conectividade  
 - Aprendizado sobre redes e cibersegurança
 
 ---
@@ -19,7 +19,7 @@ Este programa escaneia portas TCP de um host específico para identificar quais 
 
 ### ✅ Pré-requisitos
 
-- Python 3.6 ou superior
+- Python 3.6 ou superior  
 - Biblioteca externa: `tqdm`
 
 ### 📦 Instalar `tqdm`
@@ -58,13 +58,15 @@ Porta final: [ex: 1024]
 
 ## 📊 Funcionalidades
 
-- ✅ Multi-threading: escaneamento paralelo de portas
-- ✅ Barra de progresso com `tqdm`
-- ✅ Identificação de serviços comuns (HTTP, FTP, SSH etc.)
-- ✅ Validação de IP/domínio antes da varredura
-- ✅ Entrada personalizada de intervalo de portas
-- ✅ Tempo total de execução exibido
-- ✅ Resultado salvo automaticamente em `resultado_scan.txt`
+- ✅ Multi-threading: escaneamento paralelo de portas  
+- ✅ Barra de progresso com `tqdm`  
+- ✅ Identificação de serviços comuns (HTTP, FTP, SSH etc.)  
+- ✅ Captura de banners de serviços (quando disponíveis)  
+- ✅ Validação de IP/domínio antes da varredura  
+- ✅ Entrada personalizada de intervalo de portas  
+- ✅ Tempo total de execução exibido  
+- ✅ Resultado salvo automaticamente com nome único  
+- ✅ Abertura automática do arquivo de resultado após a varredura
 
 ---
 
@@ -100,13 +102,12 @@ python scanner.py
 
 Escaneando: 100%|████████████████████████| 1024/1024 [00:02<00:00, 500.00it/s]
 
-✅ Varredura concluída em 2.34 segundos.
+✅ Resultados salvos em: resultado_scan_google_com_20250814_1345.txt
+⏱️ Varredura concluída em 2.34 segundos.
 
 🔓 Portas abertas encontradas:
-  - Porta 80 (HTTP)
-  - Porta 443 (HTTPS)
-
-📝 Resultado salvo em 'resultado_scan.txt'
+ Porta 80: HTTP
+ Porta 443: HTTPS
 ```
 
 ---
@@ -116,10 +117,12 @@ Escaneando: 100%|█████████████████████
 ```
 port-scanner/
 │
-├── scanner.py           # Arquivo principal do scanner
-├── resultado_scan.txt   # Arquivo gerado com os resultados
-└── README.md            # Documentação do projeto
+├── scanner.py                         # Arquivo principal do scanner
+├── resultado_scan_<host>_<data>.txt  # Arquivos gerados com os resultados
+└── README.md                          # Documentação do projeto
 ```
+
+> Os arquivos de resultado são gerados com nome único, como `resultado_scan_google_com_20250814_1345.txt`, permitindo histórico de varreduras.
 
 ---
 
@@ -127,7 +130,7 @@ port-scanner/
 
 ### Uso Responsável
 
-- ⚠️ Use apenas em redes que você possui ou tem permissão para testar.
+- ⚠️ Use apenas em redes que você possui ou tem permissão para testar.  
 - ❌ Não utilize para atividades maliciosas ou invasivas.
 
 ---
@@ -138,6 +141,4 @@ port-scanner/
 Projeto desenvolvido para estudo de programação, redes e cibersegurança.
 
 ---
-
-```
 

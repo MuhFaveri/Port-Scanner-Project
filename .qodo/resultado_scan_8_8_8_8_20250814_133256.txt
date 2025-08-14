@@ -1,0 +1,6 @@
+Resultado da varredura em 8.8.8.8
+Tempo de execução: 1.33 segundos
+
+Portas abertas encontradas:
+ Porta 53: domain
+ Porta 443: https
