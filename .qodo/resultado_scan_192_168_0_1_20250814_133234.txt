@@ -1,5 +1,0 @@
-Resultado da varredura em 192.168.0.1
-Tempo de execução: 1.33 segundos
-
-Portas abertas encontradas:
- Porta 80: http
