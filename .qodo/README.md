@@ -1,6 +1,6 @@
 # 🔍 Port Scanner Python — Scanner de Portas TCP e UDP
 
-Um scanner de portas **TCP e UDP** simples, eficiente e interativo, escrito em Python. Utiliza **multi-threading**, **barra de progresso com `tqdm`**, captura **banners de serviços**, e gera arquivos de resultado com **timestamp automático**. Ideal para escanear hosts locais ou remotos com rapidez, clareza e profundidade.
+Um scanner de portas **TCP e UDP** simples, eficiente e interativo, escrito em Python. Utiliza **multi-threading**, captura **banners de serviços**, e gera arquivos de resultado com **timestamp automático**. Agora com **interface gráfica em Tkinter**, ideal para escanear hosts locais ou remotos com rapidez, clareza e profundidade.
 
 ---
 
@@ -20,7 +20,7 @@ Este programa escaneia portas TCP ou UDP de um host específico para identificar
 ### ✅ Pré-requisitos
 
 - Python 3.6 ou superior  
-- Biblioteca externa: `tqdm`
+- Biblioteca externa: `tqdm` (usada na versão terminal)
 
 ### 📦 Instalar `tqdm`
 
@@ -40,27 +40,26 @@ python3 --version
 
 ## 🎯 Como Usar
 
-### 1. Executar o scanner
+### 1. Executar a interface gráfica
 
 ```bash
-python scanner.py
+python utils.py
 ```
 
-### 2. O programa solicitará:
+### 2. Preencha os campos
 
-```text
-Digite o IP ou domínio para escanear: [ex: google.com]
-Tipo de escaneamento (TCP/UDP): [ex: TCP]
-Porta inicial: [ex: 1]
-Porta final: [ex: 1024]
-```
+- IP ou domínio (ex: `google.com`)  
+- Tipo de escaneamento (`TCP` ou `UDP`)  
+- Porta inicial (ex: `1`)  
+- Porta final (ex: `1024`)  
+- Clique em **Iniciar Scan**
 
 ---
 
 ## 📊 Funcionalidades
 
-- ✅ Multi-threading: escaneamento paralelo de portas  
-- ✅ Barra de progresso com `tqdm`  
+- ✅ Multi-threading com controle de concorrência  
+- ✅ Interface gráfica com Tkinter  
 - ✅ Suporte a escaneamento TCP e UDP  
 - ✅ Identificação de serviços comuns (HTTP, FTP, SSH etc.)  
 - ✅ Captura de banners de serviços TCP (quando disponíveis)  
@@ -78,24 +77,24 @@ Porta final: [ex: 1024]
 ### Escanear localhost (TCP)
 
 ```bash
-python scanner.py
-# Digite: 127.0.0.1
+python utils.py
+# IP: 127.0.0.1
 # Tipo: TCP
 ```
 
 ### Escanear roteador local (UDP)
 
 ```bash
-python scanner.py
-# Digite: 192.168.0.1
+python utils.py
+# IP: 192.168.0.1
 # Tipo: UDP
 ```
 
 ### Escanear site público (TCP)
 
 ```bash
-python scanner.py
-# Digite: google.com
+python utils.py
+# IP: google.com
 # Tipo: TCP
 ```
 
@@ -104,18 +103,15 @@ python scanner.py
 ## 📋 Saída Esperada
 
 ```text
-🚀 Iniciando varredura TCP em google.com...
+Iniciando varredura TCP em google.com...
 
-Escaneando: 100%|████████████████████████| 1024/1024 [00:02<00:00, 500.00it/s]
+Varredura concluída em 2.34 segundos.
 
-✅ Resultados salvos em: resultado_scan_google_com_20250814_1345.txt
-⏱️ Varredura concluída em 2.34 segundos.
-
-🔓 Portas com serviços conhecidos:
+Portas com serviços conhecidos:
  Porta 80/TCP: HTTP
  --> Banner: HTTP/1.1 200 OK
 
-🔍 Portas sem serviço conhecido:
+Portas sem serviço conhecido:
  9999/TCP
 ```
 
@@ -123,13 +119,14 @@ Escaneando: 100%|█████████████████████
 
 ## 📁 Estrutura do Projeto
 
-```
+'''
 port-scanner/
 │
-├── scanner.py                         # Arquivo principal do scanner
-├── resultado_scan_<host>_<data>.txt  # Arquivos gerados com os resultados
+├── scanner.py                         # Lógica principal do escaneamento
+├── utils.py                           # Interface gráfica com Tkinter
+├── resultado_scan_"host_data".txt  # Arquivos gerados com os resultados
 └── README.md                          # Documentação do projeto
-```
+''''
 
 > Os arquivos de resultado são gerados com nome único, como `resultado_scan_google_com_20250814_1345.txt`, permitindo histórico de varreduras.
 

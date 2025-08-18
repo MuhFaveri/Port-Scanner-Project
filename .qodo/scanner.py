@@ -2,16 +2,21 @@ import socket
 import threading
 import time
 import os
-from tqdm import tqdm
+from concurrent.futures import ThreadPoolExecutor
 
-# Dicionário de portas mais comuns
+# Dicionário com os nomes dos serviços mais comuns por porta
 commom_ports = {
     21: "FTP", 22: "SSH", 23: "Telnet", 25: "SMTP", 53: "DNS", 80: "HTTP",
     110: "POP3", 123: "NTP", 143: "IMAP", 443: "HTTPS", 3306: "MySQL", 3389: "RDP"
 }
 
+# Lista global para armazenar portas abertas
+open_ports = []
 
-# Validação de IP/Domínio
+# Lock para evitar conflitos ao acessar a lista de portas abertas em múltiplas threads
+lock = threading.Lock()
+
+# Verifica se o IP ou domínio informado é válido
 def is_valid_target(target):
     try:
         socket.gethostbyname(target)
@@ -19,56 +24,69 @@ def is_valid_target(target):
     except socket.gaierror:
         return False
 
-# Obter nome do serviço
+# Retorna o nome do serviço associado à porta e protocolo
 def get_service_name(port, protocol="tcp"):
     try:
         return socket.getservbyport(port, protocol)
     except OSError:
         return commom_ports.get(port, "Desconhecido")
 
-# Obter banner do serviço (TCP)
+# Tenta obter o banner de um serviço TCP (informações da resposta do servidor)
 def get_banner(ip, port):
     try:
         sock = socket.socket()
-        sock.settimeout(2)
+        sock.settimeout(1)
         sock.connect((ip, port))
         sock.send(b"HEAD / HTTP/1.0\r\n\r\n")
-
         banner = sock.recv(1024).decode(errors="ignore").strip()
         sock.close()
         return banner
     except:
         return None
 
-# Função para escanear uma porta (TCP)
-def scan_tcp_port(port):
+# Escaneia uma porta TCP e adiciona à lista se estiver aberta
+def scan_tcp_port(target, port):
     try:
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.settimeout(2)
+        sock.settimeout(1)
         result = sock.connect_ex((target, port))
         if result == 0:
-            open_ports.append((port, "TCP"))
+            with lock:
+                if (port, "TCP") not in open_ports:
+                    open_ports.append((port, "TCP"))
         sock.close()
     except:
         pass
 
-# Função para escanear poras UDP
-def scan_udp_port(port):
+# Escaneia uma porta UDP e adiciona à lista se houver resposta ou timeout
+def scan_udp_port(target, port):
     try:
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        sock.settimeout(2)
-        sock.sendto(b"PING", (target, port))
+        sock.settimeout(1)
+
+        # Envia pacote DNS se for porta 53, senão envia "PING"
+        if port == 53:
+            dns_query = b"\x00\x00\x10\x00\x00\x01\x00\x00\x00\x00\x00\x00\x03www\x06google\x03com\x00\x00\x01\x00\x01"
+            sock.sendto(dns_query, (target, port))
+        else:
+            sock.sendto(b"PING", (target, port))
+
         try:
             data, _ = sock.recvfrom(1024)
-            open_ports.append((port, "UDP"))
+            with lock:
+                if (port, "UDP") not in open_ports:
+                    open_ports.append((port, "UDP"))
         except socket.timeout:
-            open_ports.append((port, "UDP"))
+            # Mesmo sem resposta, pode estar aberta (UDP não garante retorno)
+            with lock:
+                if (port, "UDP") not in open_ports:
+                    open_ports.append((port, "UDP"))
     except:
         pass
     finally:
         sock.close()
 
-# Função para salvar e abrir o resultado
+# Salva os resultados da varredura em um arquivo .txt e tenta abrir automaticamente
 def salvar_resultado_txt(target, open_ports, tempo_execucao):
     timestamp = time.strftime("%Y%m%d_%H%M%S")
     nome_arquivo = f"resultado_scan_{target.replace('.', '_')}_{timestamp}.txt"
@@ -81,7 +99,7 @@ def salvar_resultado_txt(target, open_ports, tempo_execucao):
 
             if open_ports:
                 arquivo.write("Portas abertas encontradas:\n")
-                for port, proto in open_ports:
+                for port, proto in sorted(open_ports):
                     service = get_service_name(port, proto.lower())
                     arquivo.write(f" Porta {port}/{proto}: {service}\n")
                     if proto == "TCP":
@@ -92,85 +110,30 @@ def salvar_resultado_txt(target, open_ports, tempo_execucao):
                 arquivo.write("Nenhuma porta aberta encontrada.\n")
 
         print(f"✅ Resultados salvos em: {nome_arquivo}")
-
-        # Abrir o arquivo automaticamente
         try:
-            os.startfile(nome_arquivo)  # Windows
+            os.startfile(nome_arquivo)
         except AttributeError:
             try:
-                os.system(f"open {nome_arquivo}")  # macOS
+                os.system(f"open {nome_arquivo}")
             except:
-                os.system(f"xdg-open {nome_arquivo}")  # Linux
-
+                os.system(f"xdg-open {nome_arquivo}")
     except Exception as e:
         print(f"❌ Erro ao salvar o arquivo: {e}")
 
-# Entrada do usuário
-target = input("Digite o IP ou domínio para escanear: ").strip()
-if not is_valid_target(target):
-    print("Endereço inválido. Tente novamente.")
-    exit()
+# Função principal que executa a varredura usando múltiplas threads
+def executar_scan(target, tipo_scan, start_port, end_port):
+    global open_ports
+    open_ports = []
 
-tipo_scan = input("Tipo de escaneamento (TCP/UDP): ").strip().upper()
-if tipo_scan not in ["TCP", "UDP"]:
-    print("Tipo inválido. Escolha 'TCP' ou 'UDP'.")
-    exit()
+    start_time = time.time()
 
-# Intervalo de portas 
-try:
-    start_port = int(input("Porta inicial: "))
-    end_port = int(input("Porta final: "))
-    if start_port < 1 or end_port > 65535 or start_port > end_port:
-        raise ValueError
-except ValueError:
-    print("Intervalo de portas inválido.")
-    exit()
+    with ThreadPoolExecutor(max_workers=100) as executor:
+        for port in range(start_port, end_port + 1):
+            if tipo_scan == "TCP":
+                executor.submit(scan_tcp_port, target, port)
+            else:
+                executor.submit(scan_udp_port, target, port)
 
-# Lista para armazenar portas abertas (TCP)
-open_ports = []
-
-# Início da varredura
-print(f"\n🚀 Iniciando varredura {tipo_scan} em {target}...\n")
-start_time = time.time()
-
-threads = []
-for port in tqdm(range(start_port, end_port + 1,), desc="Escaneando"):
-    if tipo_scan == "TCP":
-        thread = threading.Thread(target=scan_tcp_port, args=(port,))
-    else:
-        thread = threading.Thread(target=scan_udp_port, args=(port,))
-        thread.start()
-        threads.append(thread)
-
-for thread in threads:
-    thread.join()
-
-end_time = time.time()
-tempo_execucao = end_time - start_time
-
-# Salvar e abrir resultado
-salvar_resultado_txt(target, open_ports, tempo_execucao)
-
-# Exibir resumo no terminal
-print(f"\n⏱️ Varredura concluída em {tempo_execucao:.2f} segundos.")
-if open_ports:
-    conhecidas = []
-    desconhecidas = []
-    for port, proto in open_ports:
-        service = get_service_name(port, proto.lower())
-        if service == "Desconhecido":
-            desconhecidas.append(f"{port}/{proto}")
-        else:
-            conhecidas.append(f" Porta {port}/{proto}: {service}")
-
-    if conhecidas:
-        print("🔓 Portas com serviços conhecidos:")
-        for linha in conhecidas:
-            print(linha)
-
-    if desconhecidas:
-        print("\n🔍 Portas sem serviço conhecido:")
-        print(", ".join(desconhecidas))
-else:
-    print("🔒 Nenhuma porta aberta encontrada.")
-
+    tempo_execucao = time.time() - start_time
+    salvar_resultado_txt(target, open_ports, tempo_execucao)
+    return tempo_execucao
