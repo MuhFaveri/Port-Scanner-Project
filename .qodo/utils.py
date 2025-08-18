@@ -3,98 +3,90 @@ from tkinter import ttk, messagebox
 import threading
 import scanner
 
-# Função chamada ao clicar no botão "Iniciar Scan"
-def iniciar_scan():
-    # Captura os dados inseridos pelo usuário
-    target = entry_target.get().strip()
-    tipo = combo_tipo.get()
-    try:
-        start_port = int(entry_inicio.get())
-        end_port = int(entry_fim.get())
-    except ValueError:
-        messagebox.showerror("Erro", "Portas devem ser números inteiros.")
-        return
+class ScannerApp:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Scanner de Portas")
+        self.root.geometry("500x600")
 
-    # Valida o IP ou domínio
-    if not scanner.is_valid_target(target):
-        messagebox.showerror("Erro", "Endereço inválido.")
-        return
+        self.frame = ttk.Frame(root, padding="10")
+        self.frame.pack(fill="both", expand=True)
 
-    # Valida o tipo de escaneamento
-    if tipo not in ["TCP", "UDP"]:
-        messagebox.showerror("Erro", "Tipo de escaneamento inválido. Escolha 'TCP' ou 'UDP'.")
-        return
+        # IP ou Domínio
+        ttk.Label(self.frame, text="IP ou Domínio:").pack(anchor="w")
+        self.entry_target = ttk.Entry(self.frame)
+        self.entry_target.pack(fill="x")
 
-    # Valida o intervalo de portas
-    if start_port < 1 or end_port > 65535 or start_port > end_port:
-        messagebox.showerror("Erro", "Intervalo de portas inválido.")
-        return
+        # Tipo de Escaneamento
+        ttk.Label(self.frame, text="Tipo de Escaneamento:").pack(anchor="w")
+        self.combo_tipo = ttk.Combobox(self.frame, values=["TCP", "UDP"])
+        self.combo_tipo.pack(fill="x")
+        self.combo_tipo.current(0)
 
-    # Desativa o botão e limpa a área de resultados
-    btn_scan.config(state="disabled")
-    resultado_text.delete("1.0", tk.END)
+        # Porta Inicial
+        ttk.Label(self.frame, text="Porta Inicial:").pack(anchor="w")
+        self.entry_inicio = ttk.Entry(self.frame)
+        self.entry_inicio.pack(fill="x")
 
-    # Função que será executada em uma thread separada
-    def executar():
-        resultado_text.insert(tk.END, f"Iniciando varredura {tipo} em {target}...\n")
+        # Porta Final
+        ttk.Label(self.frame, text="Porta Final:").pack(anchor="w")
+        self.entry_fim = ttk.Entry(self.frame)
+        self.entry_fim.pack(fill="x")
 
-        # Chama a função principal do scanner
-        tempo_execucao = scanner.executar_scan(target, tipo, start_port, end_port)
+        # Botão de Scan
+        self.btn_scan = ttk.Button(self.frame, text="Iniciar Scan", command=self.iniciar_scan)
+        self.btn_scan.pack(pady=10)
 
-        # Exibe o tempo de execução
-        resultado_text.insert(tk.END, f"\nVarredura concluída em {tempo_execucao:.2f} segundos.\n")
+        # Área de Resultado
+        self.resultado_text = tk.Text(self.frame, height=15)
+        self.resultado_text.pack(fill="both", expand=True)
 
-        # Exibe os resultados das portas abertas
-        if scanner.open_ports:
-            for port, proto in scanner.open_ports:
-                service = scanner.get_service_name(port, proto.lower())
-                resultado_text.insert(tk.END, f" Porta {port}/{proto}: {service}\n")
-        else:
-            resultado_text.insert(tk.END, "Nenhuma porta aberta encontrada.\n")
+    def iniciar_scan(self):
+        target = self.entry_target.get().strip()
+        tipo = self.combo_tipo.get()
 
-        # Reativa o botão após a conclusão
-        btn_scan.config(state="normal")
+        try:
+            start_port = int(self.entry_inicio.get())
+            end_port = int(self.entry_fim.get())
+        except ValueError:
+            messagebox.showerror("Erro", "Portas devem ser números inteiros.")
+            return
 
-    # Inicia a thread para não travar a interface
-    threading.Thread(target=executar).start()
+        if not scanner.is_valid_target(target):
+            messagebox.showerror("Erro", "Endereço inválido.")
+            return
 
-# Criação da janela principal da interface gráfica
-root = tk.Tk()
-root.title("Scanner de Portas")
-root.geometry("500x600")
+        if tipo not in ["TCP", "UDP"]:
+            messagebox.showerror("Erro", "Tipo de escaneamento inválido. Escolha 'TCP' ou 'UDP'.")
+            return
 
-# Frame principal com padding
-frame = ttk.Frame(root, padding="10")
-frame.pack(fill="both", expand=True)
+        if start_port < 1 or end_port > 65535 or start_port > end_port:
+            messagebox.showerror("Erro", "Intervalo de portas inválido.")
+            return
 
-# Campo para IP ou domínio
-ttk.Label(frame, text="IP ou Domínio:").pack(anchor="w")
-entry_target = ttk.Entry(frame)
-entry_target.pack(fill="x")
+        self.btn_scan.config(state="disabled")
+        self.resultado_text.delete("1.0", tk.END)
 
-# Campo para tipo de escaneamento (TCP ou UDP)
-ttk.Label(frame, text="Tipo de Escaneamento:").pack(anchor="w")
-combo_tipo = ttk.Combobox(frame, values=["TCP", "UDP"])
-combo_tipo.pack(fill="x")
-combo_tipo.current(0)
+        def executar():
+            self.resultado_text.insert(tk.END, f"Iniciando varredura {tipo} em {target}...\n")
 
-# Campo para porta inicial
-ttk.Label(frame, text="Porta Inicial:").pack(anchor="w")
-entry_inicio = ttk.Entry(frame)
-entry_inicio.pack(fill="x")
+            tempo_execucao = scanner.executar_scan(target, tipo, start_port, end_port)
 
-# Campo para porta final
-ttk.Label(frame, text="Porta Final:").pack(anchor="w")
-entry_fim = ttk.Entry(frame)
-entry_fim.pack(fill="x")
+            self.resultado_text.insert(tk.END, f"\nVarredura concluída em {tempo_execucao:.2f} segundos.\n")
 
-# Botão para iniciar o escaneamento
-btn_scan = ttk.Button(frame, text="Iniciar Scan", command=iniciar_scan)
-btn_scan.pack(pady=10)
+            if scanner.open_ports:
+                for port, proto in scanner.open_ports:
+                    service = scanner.get_service_name(port, proto.lower())
+                    self.resultado_text.insert(tk.END, f" Porta {port}/{proto}: {service}\n")
+            else:
+                self.resultado_text.insert(tk.END, "Nenhuma porta aberta encontrada.\n")
 
-# Área de texto para exibir os resultados
-resultado_text = tk.Text(frame, height=15)
-resultado_text.pack(fill="both", expand=True)
+            self.btn_scan.config(state="normal")
 
-# Inicia o loop principal da interface
-root.mainloop()
+        threading.Thread(target=executar).start()
+
+# Execução da aplicação
+if __name__ == "__main__":
+    root = tk.Tk()
+    app = ScannerApp(root)
+    root.mainloop()
