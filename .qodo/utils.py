@@ -1,4 +1,4 @@
-# Importa bibliotecas necessárias
+# Importa bibliotecas da interface
 import tkinter as tk
 from tkinter import ttk, messagebox
 import threading
@@ -8,10 +8,10 @@ import scanner  # Importa o módulo com a lógica de escaneamento
 class ScannerApp:
     def __init__(self, root):
         self.root = root
-        self.root.title("Scanner de Portas Avançado")  # Título da janela
-        self.root.geometry("550x700")  # Tamanho da janela
+        self.root.title("Scanner de Portas Avançado")
+        self.root.geometry("550x700")
 
-        # Cria um frame com padding
+        # Frame principal com espaçamento
         self.frame = ttk.Frame(root, padding="10")
         self.frame.pack(fill="both", expand=True)
 
@@ -20,11 +20,11 @@ class ScannerApp:
         self.entry_target = ttk.Entry(self.frame)
         self.entry_target.pack(fill="x")
 
-        # Combobox para escolher tipo de escaneamento (TCP ou UDP)
+        # Combobox para escolher tipo de escaneamento
         ttk.Label(self.frame, text="Tipo de Escaneamento:").pack(anchor="w")
         self.combo_tipo = ttk.Combobox(self.frame, values=["TCP", "UDP"])
         self.combo_tipo.pack(fill="x")
-        self.combo_tipo.current(0)  # Seleciona TCP por padrão
+        self.combo_tipo.current(0)
 
         # Campo para porta inicial
         ttk.Label(self.frame, text="Porta Inicial:").pack(anchor="w")
@@ -55,11 +55,11 @@ class ScannerApp:
 
     # Função chamada ao clicar no botão "Iniciar Scan"
     def iniciar_scan(self):
-        target_input = self.entry_target.get().strip()  # IP ou faixa
-        tipo = self.combo_tipo.get()  # TCP ou UDP
-        mostrar_todos = self.mostrar_desconhecidos.get()  # True ou False
+        target_input = self.entry_target.get().strip()
+        tipo = self.combo_tipo.get()
+        mostrar_todos = self.mostrar_desconhecidos.get()
 
-        # Valida se as portas são números inteiros
+        # Validação das portas
         try:
             start_port = int(self.entry_inicio.get())
             end_port = int(self.entry_fim.get())
@@ -67,7 +67,6 @@ class ScannerApp:
             messagebox.showerror("Erro", "Portas devem ser números inteiros.")
             return
 
-        # Valida intervalo de portas
         if start_port < 1 or end_port > 65535 or start_port > end_port:
             messagebox.showerror("Erro", "Intervalo de portas inválido.")
             return
@@ -76,31 +75,30 @@ class ScannerApp:
         self.btn_scan.config(state="disabled", text="Escaneando...")
         self.resultado_text.delete("1.0", tk.END)
 
-        # Função que será executada em uma thread separada
+        # Função executada em thread separada
         def executar():
-            # Gera lista de IPs se for uma faixa CIDR
             ips = scanner.gerar_ips(target_input) if "/" in target_input else [target_input]
             for ip in ips:
-                # Valida IP
                 if not scanner.is_valid_target(ip):
                     self.resultado_text.insert(tk.END, f"❌ IP inválido: {ip}\n")
                     continue
 
                 self.resultado_text.insert(tk.END, f"\n🔍 Escaneando {ip} ({tipo})...\n")
 
-                # Executa o escaneamento
-                tempo_execucao, stats = scanner.executar_scan(
-                    ip, tipo, start_port, end_port, mostrar_desconhecidos=mostrar_todos
-                )
+                try:
+                    tempo_execucao, stats = scanner.executar_scan(
+                        ip, tipo, start_port, end_port, mostrar_desconhecidos=mostrar_todos
+                    )
+                except Exception as e:
+                    self.resultado_text.insert(tk.END, f"⚠️ Erro ao escanear {ip}: {e}\n")
+                    continue
 
-                # Exibe estatísticas
                 self.resultado_text.insert(
                     tk.END,
                     f"⏱️ Tempo: {tempo_execucao:.2f}s | Média por porta: {stats['tempo_medio']:.4f}s\n"
                 )
 
                 encontrados = False
-                # Exibe resultados das portas abertas
                 for port, proto, banner in scanner.open_ports:
                     service = scanner.get_service_name(port, proto.lower())
                     if mostrar_todos or service != "Desconhecido":
@@ -111,16 +109,22 @@ class ScannerApp:
                         else:
                             self.resultado_text.insert(tk.END, f" --> Sem banner detectado\n")
 
-                # Caso nenhuma porta conhecida seja encontrada
                 if not encontrados:
                     self.resultado_text.insert(tk.END, "Nenhuma porta com serviço conhecido encontrada.\n")
 
-                # Exibe gráfico na thread principal
+                # Aviso sobre exportação automática
+                self.resultado_text.insert(tk.END, "📁 Resultados salvos em TXT, CSV e JSON na pasta atual.\n")
+
+                # Exibe gráfico se possível
                 grafico = scanner.preparar_dados_grafico(scanner.open_ports)
                 if grafico:
                     portas, cores = grafico
                     def mostrar_grafico():
-                        import matplotlib.pyplot as plt
+                        try:
+                            import matplotlib.pyplot as plt
+                        except ImportError:
+                            self.resultado_text.insert(tk.END, "📉 Matplotlib não instalado. Gráfico não exibido.\n")
+                            return
                         plt.figure(figsize=(10, 5))
                         plt.bar(portas, [1] * len(portas), color=cores)
                         plt.xlabel("Portas")
@@ -133,7 +137,7 @@ class ScannerApp:
             # Reativa botão após o scan
             self.btn_scan.config(state="normal", text="Iniciar Scan")
 
-        # Inicia a thread para não travar a interface
+        # Inicia a thread
         threading.Thread(target=executar).start()
 
 # Inicializa a aplicação

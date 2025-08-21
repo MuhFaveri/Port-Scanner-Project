@@ -1,23 +1,26 @@
-import socket
-import threading
-import time
-import os
-import ipaddress
-from concurrent.futures import ThreadPoolExecutor
+# Importa bibliotecas necessárias
+import socket       # Comunicação de rede
+import threading    # Controle de concorrência com threads
+import time         # Medição de tempo
+import os           # Operações com sistema de arquivos
+import ipaddress    # Manipulação de faixas de IP
+import csv          # Exportação para CSV
+import json         # Exportação para JSON
+from concurrent.futures import ThreadPoolExecutor  # Execução paralela com pool de threads
 
-# Dicionário com serviços comuns mapeados por porta
+# Dicionário com mapeamento de portas comuns para nomes de serviços
 commom_ports = {
     21: "FTP", 22: "SSH", 23: "Telnet", 25: "SMTP", 53: "DNS", 80: "HTTP",
     110: "POP3", 123: "NTP", 143: "IMAP", 443: "HTTPS", 3306: "MySQL", 3389: "RDP"
 }
 
-# Lista global para armazenar resultados (porta, protocolo, banner)
+# Lista global para armazenar resultados de portas abertas
 open_ports = []
 
-# Lock para evitar conflitos entre threads
+# Lock para evitar conflitos de acesso à lista entre múltiplas threads
 lock = threading.Lock()
 
-# Valida se o destino informado é um IP ou domínio válido
+# Verifica se o alvo é um IP ou domínio válido
 def is_valid_target(target):
     try:
         socket.gethostbyname(target)
@@ -25,20 +28,20 @@ def is_valid_target(target):
     except socket.gaierror:
         return False
 
-# Obtém o nome do serviço a partir da porta
+# Retorna o nome do serviço associado à porta
 def get_service_name(port, protocol="tcp"):
     try:
         return socket.getservbyport(port, protocol)
     except OSError:
         return commom_ports.get(port, "Desconhecido")
 
-# Captura o banner de um serviço TCP
+# Captura o banner de um serviço TCP (informações que o serviço retorna ao conectar)
 def get_banner(ip, port):
     try:
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.settimeout(2)
         sock.connect((ip, port))
-        if port in (80, 8080, 8000):
+        if port in (80, 8080, 8000):  # Envia requisição HTTP para serviços web
             sock.sendall(b"HEAD / HTTP/1.0\r\n\r\n")
         time.sleep(1)
         banner = sock.recv(1024).decode(errors="ignore").strip()
@@ -47,13 +50,13 @@ def get_banner(ip, port):
     except:
         return None
 
-# Tenta obter banner inteligente de serviços UDP conhecidos
+# Captura banner de serviços UDP conhecidos usando pacotes específicos
 def get_udp_banner(ip, port):
     probes = {
-        53: b"\x12\x34\x01\x00\x00\x01\x00\x00\x00\x00\x00\x00" + b"\x06google\x03com\x00\x00\x01\x00\x01",
-        123: b'\x1b' + 47 * b'\0',
-        161: b"\x30\x26\x02\x01\x01\x04\x06\x70\x75\x62\x6c\x69\x63\xa0\x19\x02\x04\x70\x00\x00\x01\x02\x01\x00\x02\x01\x00\x30\x0b\x30\x09\x06\x05\x2b\x06\x01\x02\x01\x05\x00",
-        1900: b"M-SEARCH * HTTP/1.1\r\nHOST:239.255.255.250:1900\r\nMAN:\"ssdp:discover\"\r\nMX:1\r\nST:ssdp:all\r\n\r\n"
+        53: b"\x12\x34..." ,  # DNS
+        123: b'\x1b' + 47 * b'\0',  # NTP
+        161: b"\x30\x26...",  # SNMP
+        1900: b"M-SEARCH * HTTP/1.1..."  # SSDP
     }
 
     if port not in probes:
@@ -70,7 +73,7 @@ def get_udp_banner(ip, port):
     finally:
         sock.close()
 
-# Escaneia uma porta TCP
+# Escaneia uma porta TCP e salva se estiver aberta
 def scan_tcp_port(target, port):
     try:
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -84,7 +87,7 @@ def scan_tcp_port(target, port):
     except:
         pass
 
-# Escaneia uma porta UDP com tentativa de banner inteligente
+# Escaneia uma porta UDP e tenta capturar banner
 def scan_udp_port(target, port):
     try:
         banner = get_udp_banner(target, port)
@@ -93,7 +96,7 @@ def scan_udp_port(target, port):
     except:
         pass
 
-# Salva o resultado em um arquivo de texto
+# Salva os resultados em arquivo TXT
 def salvar_resultado_txt(target, open_ports, tempo_execucao, stats):
     timestamp = time.strftime("%Y%m%d_%H%M%S")
     nome_arquivo = f"resultado_scan_{target.replace('.', '_')}_{timestamp}.txt"
@@ -117,7 +120,49 @@ def salvar_resultado_txt(target, open_ports, tempo_execucao, stats):
     except:
         pass
 
-# Prepara os dados para o gráfico (sem exibir diretamente)
+# Salva os resultados em arquivo CSV
+def salvar_resultado_csv(target, open_ports, tempo_execucao, stats):
+    timestamp = time.strftime("%Y%m%d_%H%M%S")
+    nome_arquivo = f"resultado_scan_{target.replace('.', '_')}_{timestamp}.csv"
+    try:
+        with open(nome_arquivo, mode="w", newline='', encoding="utf-8") as arquivo:
+            writer = csv.writer(arquivo)
+            writer.writerow(["Porta", "Protocolo", "Serviço", "Banner"])
+            for port, proto, banner in sorted(open_ports):
+                service = get_service_name(port, proto.lower())
+                writer.writerow([port, proto, service, banner or ""])
+        os.startfile(nome_arquivo)
+    except Exception as e:
+        print(f"Erro ao salvar CSV: {e}")
+
+# Salva os resultados em arquivo JSON
+def salvar_resultado_json(target, open_ports, tempo_execucao, stats):
+    timestamp = time.strftime("%Y%m%d_%H%M%S")
+    nome_arquivo = f"resultado_scan_{target.replace('.', '_')}_{timestamp}.json"
+    resultado = {
+        "alvo": target,
+        "tempo_execucao": tempo_execucao,
+        "estatisticas": stats,
+        "portas_abertas": []
+    }
+
+    for port, proto, banner in sorted(open_ports):
+        service = get_service_name(port, proto.lower())
+        resultado["portas_abertas"].append({
+            "porta": port,
+            "protocolo": proto,
+            "servico": service,
+            "banner": banner or ""
+        })
+
+    try:
+        with open(nome_arquivo, "w", encoding="utf-8") as arquivo:
+            json.dump(resultado, arquivo, indent=4, ensure_ascii=False)
+        os.startfile(nome_arquivo)
+    except Exception as e:
+        print(f"Erro ao salvar JSON: {e}")
+
+# Prepara dados para visualização gráfica (não exibe diretamente)
 def preparar_dados_grafico(open_ports):
     if not open_ports:
         return None
@@ -134,12 +179,13 @@ def gerar_ips(faixa):
     except ValueError:
         return []
 
-# Função principal que executa o scan
+# Função principal que executa o scan de portas
 def executar_scan(target, tipo_scan, start_port, end_port, threads=100, mostrar_desconhecidos=False):
     global open_ports
     open_ports = []
     start_time = time.time()
 
+    # Executa varredura em paralelo usando ThreadPool
     with ThreadPoolExecutor(max_workers=threads) as executor:
         for port in range(start_port, end_port + 1):
             if tipo_scan == "TCP":
@@ -147,6 +193,7 @@ def executar_scan(target, tipo_scan, start_port, end_port, threads=100, mostrar_
             else:
                 executor.submit(scan_udp_port, target, port)
 
+    # Calcula estatísticas de execução
     tempo_execucao = time.time() - start_time
     total_ports = end_port - start_port + 1
     tempo_medio = tempo_execucao / total_ports if total_ports else 0
@@ -156,7 +203,7 @@ def executar_scan(target, tipo_scan, start_port, end_port, threads=100, mostrar_
         "threads": threads
     }
 
-    # Filtra serviços desconhecidos se necessário
+    # Filtra serviços desconhecidos, se necessário
     if not mostrar_desconhecidos:
         open_ports = [
             (port, proto, banner)
@@ -164,5 +211,9 @@ def executar_scan(target, tipo_scan, start_port, end_port, threads=100, mostrar_
             if get_service_name(port, proto.lower()) != "Desconhecido"
         ]
 
+    # Salva os resultados em múltiplos formatos
     salvar_resultado_txt(target, open_ports, tempo_execucao, stats)
+    salvar_resultado_csv(target, open_ports, tempo_execucao, stats)
+    salvar_resultado_json(target, open_ports, tempo_execucao, stats)
+
     return tempo_execucao, stats

@@ -69,12 +69,15 @@ python utils.py
 - ✅ Entrada personalizada de intervalo de portas  
 - ✅ Tempo total de execução exibido  
 - ✅ Resultado salvo automaticamente com nome único  
-- ✅ Abertura automática do arquivo de resultado após a varredura  
+- ✅ Abertura automática dos arquivos gerados após a varredura  
+- ✅ Exportação automática para **TXT**, **CSV** e **JSON**  
+- ✅ Aviso visual na interface sobre os arquivos gerados  
 - ✅ Filtro opcional para ocultar serviços desconhecidos  
 - ✅ Visualização gráfica das portas abertas com `matplotlib`  
   - Barras azuis para portas TCP  
   - Barras verdes para portas UDP  
-  - Exibição segura na thread principal do Tkinter
+  - Exibição segura na thread principal do Tkinter  
+- ✅ Tratamento de erros durante escaneamento e exibição de mensagens amigáveis
 
 ---
 
@@ -121,16 +124,13 @@ python utils.py
 ## 📋 Saída Esperada
 
 ```text
-Iniciando varredura UDP em 8.8.8.8...
+🔍 Escaneando 8.8.8.8 (UDP)...
 
-Varredura concluída em 1.87 segundos.
-
-Portas com serviços conhecidos:
+⏱️ Tempo: 1.87s | Média por porta: 0.0018s
  Porta 53/UDP: DNS
  --> Banner: resposta DNS decodificada...
 
-Nenhuma porta com serviço desconhecido exibida (filtro ativo).
-
+📁 Resultados salvos em TXT, CSV e JSON na pasta atual.
 Gráfico gerado com visualização das portas abertas.
 ```
 
@@ -138,12 +138,14 @@ Gráfico gerado com visualização das portas abertas.
 
 ## 📁 Estrutura do Projeto
 
-```-
+``` -
 port-scanner/
 │
 ├── scanner.py                         # Lógica principal do escaneamento
 ├── utils.py                           # Interface gráfica com Tkinter
 ├── resultado_scan_"host_data".txt     # Arquivos gerados com os resultados
+├── resultado_scan_"host_data".csv     # Exportação em CSV
+├── resultado_scan_"host_data".json    # Exportação em JSON
 └── README.md                          # Documentação do projeto
 ```
 
