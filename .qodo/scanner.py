@@ -1,11 +1,9 @@
-# Importa bibliotecas necessárias
-import socket                 # Para comunicação de rede (TCP/UDP)
-import threading              # Para uso de múltiplas threads
-import time                   # Para medir tempo e usar delays
-import os                     # Para abrir arquivos automaticamente
-import ipaddress              # Para manipular e validar redes/intervalos de IPs
-from concurrent.futures import ThreadPoolExecutor  # Gerenciamento de threads
-import matplotlib.pyplot as plt  # Para gerar o gráfico das portas abertas
+import socket
+import threading
+import time
+import os
+import ipaddress
+from concurrent.futures import ThreadPoolExecutor
 
 # Dicionário com serviços comuns mapeados por porta
 commom_ports = {
@@ -16,13 +14,13 @@ commom_ports = {
 # Lista global para armazenar resultados (porta, protocolo, banner)
 open_ports = []
 
-# Lock para evitar conflitos quando várias threads alteram open_ports ao mesmo tempo
+# Lock para evitar conflitos entre threads
 lock = threading.Lock()
 
 # Valida se o destino informado é um IP ou domínio válido
 def is_valid_target(target):
     try:
-        socket.gethostbyname(target)  # Tenta resolver o endereço
+        socket.gethostbyname(target)
         return True
     except socket.gaierror:
         return False
@@ -32,32 +30,52 @@ def get_service_name(port, protocol="tcp"):
     try:
         return socket.getservbyport(port, protocol)
     except OSError:
-        return commom_ports.get(port, "Desconhecido")  # Fallback para nosso dicionário
+        return commom_ports.get(port, "Desconhecido")
 
-# Captura o banner de um serviço TCP, se disponível
+# Captura o banner de um serviço TCP
 def get_banner(ip, port):
     try:
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.settimeout(2)
         sock.connect((ip, port))
-
-        # Só envia requisição HTTP se a porta for típica de HTTP
         if port in (80, 8080, 8000):
             sock.sendall(b"HEAD / HTTP/1.0\r\n\r\n")
-
-        time.sleep(1)  # Espera para garantir que o servidor envie dados
+        time.sleep(1)
         banner = sock.recv(1024).decode(errors="ignore").strip()
         sock.close()
         return banner if banner else None
     except:
         return None
 
+# Tenta obter banner inteligente de serviços UDP conhecidos
+def get_udp_banner(ip, port):
+    probes = {
+        53: b"\x12\x34\x01\x00\x00\x01\x00\x00\x00\x00\x00\x00" + b"\x06google\x03com\x00\x00\x01\x00\x01",
+        123: b'\x1b' + 47 * b'\0',
+        161: b"\x30\x26\x02\x01\x01\x04\x06\x70\x75\x62\x6c\x69\x63\xa0\x19\x02\x04\x70\x00\x00\x01\x02\x01\x00\x02\x01\x00\x30\x0b\x30\x09\x06\x05\x2b\x06\x01\x02\x01\x05\x00",
+        1900: b"M-SEARCH * HTTP/1.1\r\nHOST:239.255.255.250:1900\r\nMAN:\"ssdp:discover\"\r\nMX:1\r\nST:ssdp:all\r\n\r\n"
+    }
+
+    if port not in probes:
+        return None
+
+    try:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock.settimeout(2)
+        sock.sendto(probes[port], (ip, port))
+        data, _ = sock.recvfrom(1024)
+        return data.decode(errors="ignore").strip()
+    except:
+        return None
+    finally:
+        sock.close()
+
 # Escaneia uma porta TCP
 def scan_tcp_port(target, port):
     try:
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.settimeout(1)
-        result = sock.connect_ex((target, port))  # 0 = porta aberta
+        result = sock.connect_ex((target, port))
         if result == 0:
             banner = get_banner(target, port)
             with lock:
@@ -66,30 +84,16 @@ def scan_tcp_port(target, port):
     except:
         pass
 
-# Escaneia uma porta UDP
+# Escaneia uma porta UDP com tentativa de banner inteligente
 def scan_udp_port(target, port):
     try:
-        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        sock.settimeout(1)
-        if port == 53:
-            # Pacote DNS padrão para teste
-            dns_query = b"\x00\x00\x10\x00\x00\x01\x00\x00\x00\x00\x00\x00\x03www\x06google\x03com\x00\x00\x01\x00\x01"
-            sock.sendto(dns_query, (target, port))
-        else:
-            sock.sendto(b"PING", (target, port))
-        try:
-            data, _ = sock.recvfrom(1024)  # Se receber dados, consideramos aberta
-            with lock:
-                open_ports.append((port, "UDP", None))
-        except socket.timeout:
-            with lock:
-                open_ports.append((port, "UDP", None))  # UDP pode estar aberto mesmo sem resposta
+        banner = get_udp_banner(target, port)
+        with lock:
+            open_ports.append((port, "UDP", banner))
     except:
         pass
-    finally:
-        sock.close()
 
-# Salva o resultado em um arquivo de texto com nome único (timestamp) e abre automaticamente
+# Salva o resultado em um arquivo de texto
 def salvar_resultado_txt(target, open_ports, tempo_execucao, stats):
     timestamp = time.strftime("%Y%m%d_%H%M%S")
     nome_arquivo = f"resultado_scan_{target.replace('.', '_')}_{timestamp}.txt"
@@ -102,37 +106,27 @@ def salvar_resultado_txt(target, open_ports, tempo_execucao, stats):
             arquivo.write(f"Tempo médio por porta: {stats['tempo_medio']:.4f} segundos\n\n")
             if open_ports:
                 for port_info in sorted(open_ports):
-                    if len(port_info) == 3:
-                        port, proto, banner = port_info
-                    else:
-                        port, proto = port_info
-                        banner = None
+                    port, proto, banner = port_info
                     service = get_service_name(port, proto.lower())
                     arquivo.write(f" Porta {port}/{proto}: {service}\n")
                     if banner:
                         arquivo.write(f" --> Banner: {banner}\n")
             else:
                 arquivo.write("Nenhuma porta aberta encontrada.\n")
-        os.startfile(nome_arquivo)  # Abre automaticamente o arquivo no Windows
+        os.startfile(nome_arquivo)
     except:
         pass
 
-# Mostra um gráfico de barras com as portas abertas (TCP em azul, UDP em verde)
-def exibir_grafico(open_ports):
+# Prepara os dados para o gráfico (sem exibir diretamente)
+def preparar_dados_grafico(open_ports):
     if not open_ports:
-        return
+        return None
     portas = [str(p) for p, _, _ in open_ports]
     protocolos = [proto for _, proto, _ in open_ports]
     cores = ['blue' if proto == 'TCP' else 'green' for proto in protocolos]
-    plt.figure(figsize=(10, 5))
-    plt.bar(portas, [1] * len(portas), color=cores)
-    plt.xlabel("Portas")
-    plt.ylabel("Status")
-    plt.title("Portas Abertas")
-    plt.tight_layout()
-    plt.show()
+    return portas, cores
 
-# Gera lista de IPs a partir de uma faixa CIDR (ex: 192.168.0.0/24)
+# Gera lista de IPs a partir de uma faixa CIDR
 def gerar_ips(faixa):
     try:
         rede = ipaddress.ip_network(faixa, strict=False)
@@ -141,12 +135,11 @@ def gerar_ips(faixa):
         return []
 
 # Função principal que executa o scan
-def executar_scan(target, tipo_scan, start_port, end_port, threads=100):
+def executar_scan(target, tipo_scan, start_port, end_port, threads=100, mostrar_desconhecidos=False):
     global open_ports
     open_ports = []
     start_time = time.time()
 
-    # Cria um pool de threads e distribui as portas para varredura
     with ThreadPoolExecutor(max_workers=threads) as executor:
         for port in range(start_port, end_port + 1):
             if tipo_scan == "TCP":
@@ -154,7 +147,6 @@ def executar_scan(target, tipo_scan, start_port, end_port, threads=100):
             else:
                 executor.submit(scan_udp_port, target, port)
 
-    # Calcula estatísticas
     tempo_execucao = time.time() - start_time
     total_ports = end_port - start_port + 1
     tempo_medio = tempo_execucao / total_ports if total_ports else 0
@@ -164,8 +156,13 @@ def executar_scan(target, tipo_scan, start_port, end_port, threads=100):
         "threads": threads
     }
 
-    # Salva no arquivo e mostra gráfico
-    salvar_resultado_txt(target, open_ports, tempo_execucao, stats)
-    exibir_grafico(open_ports)
+    # Filtra serviços desconhecidos se necessário
+    if not mostrar_desconhecidos:
+        open_ports = [
+            (port, proto, banner)
+            for (port, proto, banner) in open_ports
+            if get_service_name(port, proto.lower()) != "Desconhecido"
+        ]
 
+    salvar_resultado_txt(target, open_ports, tempo_execucao, stats)
     return tempo_execucao, stats
