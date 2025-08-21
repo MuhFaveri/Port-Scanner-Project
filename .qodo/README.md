@@ -1,6 +1,6 @@
 # 🔍 Port Scanner Python — Scanner de Portas TCP e UDP
 
-Um scanner de portas **TCP e UDP** simples, eficiente e interativo, escrito em Python. Utiliza **multi-threading**, captura **banners de serviços**, gera arquivos de resultado com **timestamp automático**, e agora conta com **visualização gráfica das portas abertas** via `matplotlib`. Com interface gráfica em **Tkinter**, é ideal para escanear hosts locais ou remotos com rapidez, clareza e profundidade.
+Um scanner de portas **TCP e UDP** completo, eficiente e interativo, escrito em Python. Utiliza **multi-threading**, captura **banners de serviços**, gera arquivos de resultado com **timestamp automático**, e conta com **visualização gráfica das portas abertas** via `matplotlib`. Com interface gráfica em **Tkinter**, é ideal para escanear hosts locais ou remotos com rapidez, clareza e profundidade.
 
 ---
 
@@ -20,12 +20,12 @@ Este programa escaneia portas TCP ou UDP de um host específico para identificar
 ### ✅ Pré-requisitos
 
 - Python 3.6 ou superior  
-- Bibliotecas externas: `tqdm`, `matplotlib`
+- Bibliotecas externas: `matplotlib`
 
 ### 📦 Instalar dependências
 
 ```bash
-pip install tqdm matplotlib
+pip install matplotlib
 ```
 
 ### 🔍 Verificar versão do Python
@@ -52,6 +52,7 @@ python utils.py
 - Tipo de escaneamento (`TCP` ou `UDP`)  
 - Porta inicial (ex: `1`)  
 - Porta final (ex: `1024`)  
+- Marque ou desmarque a opção **"Mostrar serviços desconhecidos"**  
 - Clique em **Iniciar Scan**
 
 ---
@@ -62,17 +63,18 @@ python utils.py
 - ✅ Interface gráfica com Tkinter  
 - ✅ Suporte a escaneamento TCP e UDP  
 - ✅ Identificação de serviços comuns (HTTP, FTP, SSH etc.)  
-- ✅ Captura de banners de serviços TCP (quando disponíveis)  
+- ✅ Captura de banners de serviços TCP e UDP (quando disponíveis)  
+- ✅ Detecção inteligente de serviços UDP via pacotes específicos  
 - ✅ Validação de IP/domínio antes da varredura  
 - ✅ Entrada personalizada de intervalo de portas  
 - ✅ Tempo total de execução exibido  
 - ✅ Resultado salvo automaticamente com nome único  
 - ✅ Abertura automática do arquivo de resultado após a varredura  
-- ✅ Resumo final com serviços conhecidos e desconhecidos  
-- ✅ **Visualização gráfica das portas abertas com `matplotlib`**  
+- ✅ Filtro opcional para ocultar serviços desconhecidos  
+- ✅ Visualização gráfica das portas abertas com `matplotlib`  
   - Barras azuis para portas TCP  
   - Barras verdes para portas UDP  
-  - Exibição clara e rápida dos serviços detectados
+  - Exibição segura na thread principal do Tkinter
 
 ---
 
@@ -119,16 +121,15 @@ python utils.py
 ## 📋 Saída Esperada
 
 ```text
-Iniciando varredura TCP em google.com...
+Iniciando varredura UDP em 8.8.8.8...
 
-Varredura concluída em 2.34 segundos.
+Varredura concluída em 1.87 segundos.
 
 Portas com serviços conhecidos:
- Porta 80/TCP: HTTP
- --> Banner: HTTP/1.1 200 OK
+ Porta 53/UDP: DNS
+ --> Banner: resposta DNS decodificada...
 
-Portas sem serviço conhecido:
- 9999/TCP
+Nenhuma porta com serviço desconhecido exibida (filtro ativo).
 
 Gráfico gerado com visualização das portas abertas.
 ```
@@ -143,7 +144,6 @@ port-scanner/
 ├── scanner.py                         # Lógica principal do escaneamento
 ├── utils.py                           # Interface gráfica com Tkinter
 ├── resultado_scan_"host_data".txt     # Arquivos gerados com os resultados
-├── grafico_portas.png                 # (Opcional) Imagem exportada do gráfico
 └── README.md                          # Documentação do projeto
 ```
 
